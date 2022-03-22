@@ -1,2 +1,3 @@
-# Blog
-博客网站的文章
+# Obito's Blog
+## Blog address : www.bianjiahao.com
+## Welcome
