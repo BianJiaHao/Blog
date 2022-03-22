@@ -65,7 +65,35 @@ Zookeeper作为分布式应用之间的开源的协调服务，他提供了一�
 
 **Zookeeper的可靠性**
 
-> 
+> 那么Zookeeper是如何实现高可用的呢，换言之就是如何快速从不可用状态恢复回可用状态的呢，首先我们要了解Zookeeper集群的通讯模式，如下图，3888端口是节点直接进行通讯的端口用于选主投票，而2888端口则是master节点开放与slave节点通讯的端口，我们假设现在有4个节点，分别是Node-1，Node-2，Node-3，Node-4，而每个节点都有自己的MyId(**是选举Master的重要凭证**),和Zid(**可以先理解为自己节点数据的版本号，后续会详细解释**)，Master选举会发生在两个阶段：分别是集群刚启动的时候以及Master节点宕机的时候，下图演示的是集群刚启动的状态，Master节点宕机的状态在下文展示。
+>
+> 我们假设启动节点的顺序为Node-1，Node-2，Node-4，Node-3
+>
+> Node-1启动：此时集群节点的数量为1并没有超过2(**过半**),集群也是不可用的状态，开启3888端口。
+>
+> Node-2启动：连接Node-1的3888端口，开启自己的3888端口
+>
+> Node-4启动：连接Node-1和Node-2的3888端口，开启自己的3888端口，此时集群节点的数量已经过半，开始投票，Node-4将自己的信息发送给Node-1，Node-2，因为集群刚启动所以每个人的Zid都是0，Node-4的Myid为4，Node-1接受到Node-4的投票信息发现他的Zid和自己一样但是Myid比自己大，果断投了一票给Node-4，同样Node-2也是如此，所以Node-4很快收到了包含自己在内的3票已经过半则将直接变为Master节点，并且开启自己的2888端口，Node-1和Node-2连接Node-4的2888端口。
+>
+> Node-3启动：连接Node-1，Node-2，Node-4的3888端口以及Node-4的2888端口
+>
+> 每两个节点直接都能够通过3888端口来进行交流并且不重复
+>
+> <img src="C:\Users\admin\Desktop\Blog\Blog\分布式\ZooKeeper\images\Snipaste_2022-03-22_17-42-13.png" style="zoom:75%;" />
+>
+> 如果集群运行了一段时间Master节点突然宕机了，则会发生Master选举的第二种情况，Node-3在向Node-4发送请求的时候发现Node-4已经宕机了，则会立即通过3888向Node-1，Node-2发起投票将直接的信息发送给Node-1和Node-2，Node-1收到Node-3的投票信息发现Node-3的Zid比自己小立刻驳回他的投票并且触发对自己的投票，将直接的信息发送给Node-2和Node-3,Node-2也是一样，这样Node-3就会收到Node-1和Node-2的投票信息，分别给他们两个投一票，Node-1又会收到Node-2的信息，发现Node-2的MyId比自己大，给Node-2投一票，此时Node-2已经收到了过半的投票数则将直接变成Master并且开放自己的2888端口让Node-1和Node-3连接。
+>
+> ![](C:\Users\admin\Desktop\Blog\Blog\分布式\ZooKeeper\images\Snipaste_2022-03-22_17-43-50.png)
+>
+> 集群恢复为下面的状态：
+>
+> <img src="C:\Users\admin\Desktop\Blog\Blog\分布式\ZooKeeper\images\Snipaste_2022-03-22_17-49-59.png" style="zoom:75%;" />
+>
+> 所有这里可以得出Zookeeper高可用的原因，在Master选举的过程中，并不是争取制度，而是谦让制度，谁的Zid和Myid高谁就来当Master
+
+
+
+
 
 ### 安装 
 
